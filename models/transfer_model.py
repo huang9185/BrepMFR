@@ -192,7 +192,7 @@ class DomainAdapt(pl.LightningModule):
         pred_s = torch.argmax(node_seg_s, dim=-1)  # pres [total_nodes]
         pred_s_np = pred_s.long().detach().cpu().numpy()
         label_s_np = label_s.long().detach().cpu().numpy()
-        per_face_comp_s = (pred_s_np == label_s_np).astype(np.int)
+        per_face_comp_s = (pred_s_np == label_s_np).astype(int)
         self.log("train_acc_s", np.mean(per_face_comp_s), on_step=True, on_epoch=True)
 
         pred_t = torch.argmax(node_seg_t, dim=-1)  # pres [total_nodes]
@@ -201,7 +201,7 @@ class DomainAdapt(pl.LightningModule):
         pred_t_ = pred_t[known_pos]
         label_t_np = label_t_.long().detach().cpu().numpy()
         pred_t_np = pred_t_.long().detach().cpu().numpy()
-        per_face_comp_t = (pred_t_np == label_t_np).astype(np.int)
+        per_face_comp_t = (pred_t_np == label_t_np).astype(int)
         self.log("train_acc_t", np.mean(per_face_comp_t), on_step=True, on_epoch=True)
         # ===============================================================================================
 
@@ -276,7 +276,7 @@ class DomainAdapt(pl.LightningModule):
         for i in range(len(pred_t_np)): self.pred_t.append(pred_t_np[i])
         for i in range(len(label_t_np)): self.label_t.append(label_t_np[i])
 
-        per_face_comp_t = (pred_t_np == label_t_np).astype(np.int)
+        per_face_comp_t = (pred_t_np == label_t_np).astype(int)
         loss = 1.0 / np.mean(per_face_comp_t)
         self.log("eval_loss", loss, on_step=False, on_epoch=True)
         return loss
@@ -286,20 +286,20 @@ class DomainAdapt(pl.LightningModule):
         label_s_np = np.array(self.label_s)
         self.pred_s = []
         self.label_s = []
-        per_face_comp_s = (pred_s_np == label_s_np).astype(np.int)
+        per_face_comp_s = (pred_s_np == label_s_np).astype(int)
         self.log("per_face_accuracy_source", np.mean(per_face_comp_s))
 
         pred_t_np = np.array(self.pred_t)
         label_t_np = np.array(self.label_t)
         self.pred_t = []
         self.label_t = []
-        per_face_comp_t = (pred_t_np == label_t_np).astype(np.int)
+        per_face_comp_t = (pred_t_np == label_t_np).astype(int)
         self.log("per_face_accuracy_target", np.mean(per_face_comp_t))
 
         feature_pos = np.where(label_t_np > 0)
         feature_pred = pred_t_np[feature_pos]
         feature_label = label_t_np[feature_pos]
-        per_face_comp_feature = (feature_pred == feature_label).astype(np.int)
+        per_face_comp_feature = (feature_pred == feature_label).astype(int)
         self.log("per_face_accuracy_target_feature", np.mean(per_face_comp_feature))
 
         print("num_classes: %s" % self.num_classes)
@@ -310,7 +310,7 @@ class DomainAdapt(pl.LightningModule):
             if len(class_pos[0]) > 0:
                 class_i_pred = pred_t_np[class_pos]
                 class_i_label = label_t_np[class_pos]
-                per_face_comp = (class_i_pred == class_i_label).astype(np.int)
+                per_face_comp = (class_i_pred == class_i_label).astype(int)
                 per_class_acc.append(np.mean(per_face_comp))
                 print("class_%s_acc: %s" % (i + 1, np.mean(per_face_comp)))
         print("per_class_accuracy: %s" % np.mean(per_class_acc))
@@ -368,11 +368,13 @@ class DomainAdapt(pl.LightningModule):
         out_face_feature = face_feature.long().detach().cpu().numpy()  # [n_graph, max_n_node]
         for i in range(n_graph):
             # 计算每个graph的实际n_node
-            end_index = max_n_node - np.sum((out_face_feature[i][:] == -1).astype(np.int))
+            end_index = max_n_node - np.sum((out_face_feature[i][:] == -1).astype(int))
             # masked出实际face feature
             pred_feature = out_face_feature[i][:end_index + 1]  # (n_node)
 
-            output_path = pathlib.Path("/home/zhang/datasets_segmentation/2_val")
+            # Per-model predictions go to $BREPMFR_PRED_DIR (default: results/predictions)
+            output_path = pathlib.Path(os.environ.get("BREPMFR_PRED_DIR", "results/predictions"))
+            output_path.mkdir(parents=True, exist_ok=True)
             file_name = "feature_" + str(batch["id"][n_graph + i].long().detach().cpu().numpy()) + ".txt"
             file_path = os.path.join(output_path, file_name)
             feature_file = open(file_path, mode="a")
@@ -412,7 +414,7 @@ class DomainAdapt(pl.LightningModule):
         label_t_np = np.array(self.label_t)
         self.pred_t = []
         self.label_t = []
-        per_face_comp_t = (pred_t_np == label_t_np).astype(np.int)
+        per_face_comp_t = (pred_t_np == label_t_np).astype(int)
         self.log("per_face_accuracy_target", np.mean(per_face_comp_t))
         print("num_classes: %s" % self.num_classes)
         print("per_face_accuracy: %s" % np.mean(per_face_comp_t))
@@ -420,7 +422,7 @@ class DomainAdapt(pl.LightningModule):
         feature_pos = np.where(label_t_np > 0)
         feature_pred = pred_t_np[feature_pos]
         feature_label = label_t_np[feature_pos]
-        per_face_comp_feature = (feature_pred == feature_label).astype(np.int)
+        per_face_comp_feature = (feature_pred == feature_label).astype(int)
         self.log("per_face_accuracy_target_feature", np.mean(per_face_comp_feature))
         print("per_face_accuracy_feature: %s" % np.mean(per_face_comp_feature))
 
@@ -431,7 +433,7 @@ class DomainAdapt(pl.LightningModule):
             if len(class_pos[0]) > 0:
                 class_i_preds = pred_t_np[class_pos]
                 class_i_label = label_t_np[class_pos]
-                per_face_comp = (class_i_preds == class_i_label).astype(np.int)
+                per_face_comp = (class_i_preds == class_i_label).astype(int)
                 per_class_acc.append(np.mean(per_face_comp))
                 print("class_%s_acc: %s" % (i + 1, np.mean(per_face_comp)))
         self.log("per_class_accuracy", np.mean(per_class_acc))
@@ -445,11 +447,11 @@ class DomainAdapt(pl.LightningModule):
             if len(pred_pos[0]) > 0 and len(label_pos[0]) > 0:
                 class_i_preds = pred_t_np[label_pos]
                 class_i_label = label_t_np[label_pos]
-                Intersection = (class_i_preds == class_i_label).astype(np.int)
-                Union = (class_i_preds != class_i_label).astype(np.int)
+                Intersection = (class_i_preds == class_i_label).astype(int)
+                Union = (class_i_preds != class_i_label).astype(int)
                 class_i_preds_ = pred_t_np[pred_pos]
                 class_i_label_ = label_t_np[pred_pos]
-                Union_ = (class_i_preds_ != class_i_label_).astype(np.int)
+                Union_ = (class_i_preds_ != class_i_label_).astype(int)
                 per_class_iou.append(np.sum(Intersection) / (np.sum(Union) + np.sum(Intersection) + np.sum(Union_)))
         self.log("IoU", np.mean(per_class_iou))
         print("IoU: %s" % np.mean(per_class_iou))

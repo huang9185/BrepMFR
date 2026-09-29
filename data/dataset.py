@@ -38,7 +38,7 @@ class CADSynth(Dataset):
     def _get_filenames(self, root_dir, filelist):
         print(f"Loading data...")
         with open(str(root_dir / f"{filelist}"), "r") as f:
-            file_list = [x.strip() for x in f.readlines()]
+            file_list = set(x.strip() for x in f.readlines())  # set: O(1) lookups on 100k files
         for x in tqdm(root_dir.rglob(f"*[0-9].bin")):
             if x.stem in file_list:
                 self.file_paths.append(x)
@@ -109,7 +109,7 @@ class CADSynth(Dataset):
             shuffle=shuffle,
             collate_fn=self._collate,
             num_workers=num_workers,
-            drop_last=True,
+            drop_last=shuffle,  # keep every val/test model; drop the last partial batch only when training
             pin_memory=True,
             prefetch_factor=2,
             persistent_workers=False
@@ -152,7 +152,7 @@ class TransferDataset(Dataset):
 
         print(f"Loading source data...")
         with open(str(source_dir / f"{filelist_s}"), "r") as f:
-            s_file_list = [x.strip() for x in f.readlines()]
+            s_file_list = set(x.strip() for x in f.readlines())  # set: O(1) lookups on 100k files
         for x in tqdm(source_dir.rglob(f"*[0-9].bin")):
             if x.stem in s_file_list:
                 if (self.open_set):
@@ -165,7 +165,7 @@ class TransferDataset(Dataset):
 
         print(f"Loading target data...")
         with open(str(target_dir / f"{filelist_t}"), "r") as f:
-            t_file_list = [x.strip() for x in f.readlines()]
+            t_file_list = set(x.strip() for x in f.readlines())  # set: O(1) lookups on 100k files
         for x in tqdm(target_dir.rglob(f"*[0-9].bin")):
             if x.stem in t_file_list:
                 if (self.open_set):
@@ -257,7 +257,7 @@ class TransferDataset(Dataset):
             shuffle=shuffle,
             collate_fn=self._collate,
             num_workers=num_workers,
-            drop_last=True,
+            drop_last=shuffle,  # keep every val/test model; drop the last partial batch only when training
             pin_memory=True,
             prefetch_factor=2,
             persistent_workers=False
